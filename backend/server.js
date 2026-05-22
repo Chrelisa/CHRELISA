@@ -61,12 +61,29 @@ app.use((req, res) => {
   });
 });
 
-const PORT = process.env.PORT || 5000;
+const DEFAULT_PORT = 5002;
+const PORT = Number(process.env.PORT) || DEFAULT_PORT;
 
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
-  console.log(`📧 SMTP Host: ${process.env.SMTP_HOST || 'Not Configured'}`);
-  console.log(`💾 Using local file-based storage (no database required)`);
-});
+const startServer = (port) => {
+  const server = app.listen(port, () => {
+    console.log(`🚀 Server running on http://localhost:${port}`);
+    console.log(`📧 SMTP Host: ${process.env.SMTP_HOST || 'Not Configured'}`);
+    console.log(`💾 Using local file-based storage (no database required)`);
+  });
+
+  server.on('error', (err) => {
+    if (err.code === 'EADDRINUSE' && port === DEFAULT_PORT) {
+      const fallbackPort = DEFAULT_PORT + 1;
+      console.warn(`⚠️ Port ${DEFAULT_PORT} is in use. Trying http://localhost:${fallbackPort} instead.`);
+      startServer(fallbackPort);
+      return;
+    }
+
+    console.error('Server failed to start:', err);
+    process.exit(1);
+  });
+};
+
+startServer(PORT);
 
 module.exports = app;
