@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 
-// Sample categories data (can be moved to database later)
+// Static categories data (no database needed)
 const categories = [
   {
     id: 1,
@@ -61,28 +61,32 @@ const categories = [
   }
 ];
 
-// Get all categories
+// GET /api/categories - Get all categories
 router.get('/', (req, res) => {
-  res.json({ 
-    success: true, 
-    data: categories 
+  res.json({
+    success: true,
+    data: categories,
+    total: categories.length
   });
 });
 
-// Get single category
+// GET /api/categories/:id - Get single category
 router.get('/:id', (req, res) => {
-  const category = categories.find(c => c.id === parseInt(req.params.id));
-  
+  const { id } = req.params;
+  const category = categories.find(c =>
+    c.id === parseInt(id) || c.name.toLowerCase() === id.toLowerCase()
+  );
+
   if (!category) {
-    return res.status(404).json({ 
-      success: false, 
-      message: 'Category not found' 
+    return res.status(404).json({
+      success: false,
+      message: 'Category not found'
     });
   }
 
-  res.json({ 
-    success: true, 
-    data: category 
+  res.json({
+    success: true,
+    data: category
   });
 });
 

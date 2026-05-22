@@ -1,6 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const nodemailer = require('nodemailer');
+const fs = require('fs');
+const path = require('path');
+
+const NEWSLETTER_FILE = path.join(__dirname, '../data/newsletter.json');
 
 // Email configuration
 const transporter = nodemailer.createTransport({
@@ -13,62 +17,106 @@ const transporter = nodemailer.createTransport({
   }
 });
 
-// Subscribe to newsletter
+// Helper: Read subscribers from JSON file
+const readSubscribers = () => {
+  if (!fs.existsSync(NEWSLETTER_FILE)) return [];
+  try {
+    return JSON.parse(fs.readFileSync(NEWSLETTER_FILE, 'utf-8'));
+  } catch {
+    return [];
+  }
+};
+
+// Helper: Write subscribers to JSON file
+const writeSubscribers = (subscribers) => {
+  fs.writeFileSync(NEWSLETTER_FILE, JSON.stringify(subscribers, null, 2), 'utf-8');
+};
+
+// POST /api/newsletter/subscribe
 router.post('/subscribe', async (req, res) => {
   try {
     const { email } = req.body;
 
     // Validation
     if (!email) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Email is required' 
+      return res.status(400).json({
+        success: false,
+        message: 'Email is required'
       });
     }
 
-    // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Invalid email format' 
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid email format'
       });
     }
 
-    // Send confirmation email
-    await transporter.sendMail({
-      from: process.env.FROM_EMAIL,
-      to: email,
-      subject: 'Welcome to CHRELISA Newsletter',
-      html: `
-        <h2>Welcome to CHRELISA!</h2>
-        <p>Thank you for subscribing to our newsletter.</p>
-        <p>You'll now receive exclusive offers, design inspiration, and product updates directly to your inbox.</p>
-        <p>Best regards,<br>The CHRELISA Team</p>
-      `
-    });
+    const formattedEmail = email.toLowerCase().trim();
+    const subscribers = readSubscribers();
 
-    // Send notification to admin
-    await transporter.sendMail({
-      from: process.env.FROM_EMAIL,
-      to: process.env.ADMIN_EMAIL,
-      subject: 'New Newsletter Subscription',
-      html: `
-        <p>New email subscription: ${email}</p>
-      `
-    });
+    // Check for duplicate
+    const alreadySubscribed = subscribers.some(s => s.email === formattedEmail);
+    if (alreadySubscribed) {
+      return res.json({
+        success: true,
+        message: 'You are already subscribed to our newsletter!',
+        alreadySubscribed: true
+      });
+    }
 
-    res.json({ 
-      success: true, 
-      message: 'Successfully subscribed to newsletter' 
+    // Save new subscriber
+    subscribers.push({
+      id: Date.now(),
+      email: formattedEmail,
+      subscribedAt: new Date().toISOString()
+    });
+    writeSubscribers(subscribers);
+    console.log(`✉️  Saved new newsletter subscription for ${formattedEmail} to local file.`);
+
+    // Send confirmation email (gracefully skipped if SMTP is not configured)
+    let emailsSent = false;
+    if (process.env.SMTP_USER && process.env.SMTP_PASS) {
+      try {
+        await transporter.sendMail({
+          from: process.env.FROM_EMAIL || 'noreply@chrelisa.com',
+          to: email,
+          subject: 'Welcome to CHRELISA Newsletter',
+          html: `
+            <h2>Welcome to CHRELISA!</h2>
+            <p>Thank you for subscribing to our newsletter.</p>
+            <p>You'll now receive exclusive offers, design inspiration, and product updates directly to your inbox.</p>
+            <p>Best regards,<br>The CHRELISA Team</p>
+          `
+        });
+
+        await transporter.sendMail({
+          from: process.env.FROM_EMAIL || 'noreply@chrelisa.com',
+          to: process.env.ADMIN_EMAIL,
+          subject: 'New Newsletter Subscription',
+          html: `<p>New email subscription: ${email}</p>`
+        });
+        emailsSent = true;
+      } catch (emailError) {
+        console.warn('SMTP error sending newsletter confirmation emails:', emailError.message);
+      }
+    } else {
+      console.log('SMTP credentials not configured. Skipping welcome email.');
+    }
+
+    res.json({
+      success: true,
+      message: 'Successfully subscribed to newsletter!',
+      emailsSent
     });
 
   } catch (error) {
     console.error('Newsletter subscription error:', error);
-    res.status(500).json({ 
-      success: false, 
+    res.status(500).json({
+      success: false,
       message: 'Failed to subscribe',
-      error: error.message 
+      error: error.message
     });
   }
 });

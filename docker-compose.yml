@@ -17,12 +17,9 @@ services:
       - SMTP_PASS=${SMTP_PASS}
       - FROM_EMAIL=${FROM_EMAIL}
       - ADMIN_EMAIL=${ADMIN_EMAIL}
-      - MONGODB_URI=mongodb://mongo:27017/chrelisa
     volumes:
       - ./backend:/app
       - /app/node_modules
-    depends_on:
-      - mongo
     networks:
       - chrelisa-network
 
@@ -41,18 +38,6 @@ services:
       - backend
     networks:
       - chrelisa-network
-
-  mongo:
-    image: mongo:latest
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongo-data:/data/db
-    networks:
-      - chrelisa-network
-
-volumes:
-  mongo-data:
 
 networks:
   chrelisa-network:

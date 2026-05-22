@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 
-// Sample products data
+// Static products data (no database needed)
 const products = [
   {
     id: 1,
@@ -71,49 +71,48 @@ const products = [
   }
 ];
 
-// Get all products
+// GET /api/products - Get all products (optional ?category= filter)
 router.get('/', (req, res) => {
   const { category } = req.query;
 
-  let filteredProducts = products;
-
+  let filtered = products;
   if (category) {
-    filteredProducts = products.filter(p => 
+    filtered = products.filter(p =>
       p.category.toLowerCase() === category.toLowerCase()
     );
   }
 
-  res.json({ 
-    success: true, 
-    data: filteredProducts,
-    total: filteredProducts.length
+  res.json({
+    success: true,
+    data: filtered,
+    total: filtered.length
   });
 });
 
-// Get single product
+// GET /api/products/featured - Get featured products (first 6)
+router.get('/featured', (req, res) => {
+  const featured = products.slice(0, 6);
+  res.json({
+    success: true,
+    data: featured
+  });
+});
+
+// GET /api/products/:id - Get single product
 router.get('/:id', (req, res) => {
-  const product = products.find(p => p.id === parseInt(req.params.id));
-  
+  const { id } = req.params;
+  const product = products.find(p => p.id === parseInt(id));
+
   if (!product) {
-    return res.status(404).json({ 
-      success: false, 
-      message: 'Product not found' 
+    return res.status(404).json({
+      success: false,
+      message: 'Product not found'
     });
   }
 
-  res.json({ 
-    success: true, 
-    data: product 
-  });
-});
-
-// Get featured products
-router.get('/featured', (req, res) => {
-  const featured = products.slice(0, 6);
-  
-  res.json({ 
-    success: true, 
-    data: featured 
+  res.json({
+    success: true,
+    data: product
   });
 });
 
