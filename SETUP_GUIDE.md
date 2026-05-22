@@ -19,6 +19,8 @@
 - **Git**: v2.0.0 or higher
 - **Code Editor**: VS Code (recommended)
 
+> ✅ **No database required.** This project uses local JSON files for form submission persistence.
+
 ### Verify Installation
 ```bash
 node --version
@@ -32,17 +34,10 @@ git --version
 
 ### 1. Navigate to Project Directory
 ```bash
-cd /Users/kushananuththara/Desktop/CHRELISA
+cd /path/to/CHRELISA
 ```
 
-### 2. Initialize Git (if not already done)
-```bash
-git init
-git add .
-git commit -m "Initial commit: Full-stack CHRELISA application"
-```
-
-### 3. Verify Project Structure
+### 2. Verify Project Structure
 ```bash
 tree -L 2 -I 'node_modules'
 ```
@@ -51,12 +46,18 @@ Expected structure:
 ```
 CHRELISA/
 ├── backend/
+│   ├── routes/
+│   ├── data/          ← auto-created by server on first run
+│   ├── server.js
+│   └── package.json
 ├── frontend/
-├── index.html
-├── styles.css
-├── script.js
-├── LANDING_PAGE_GUIDE.md
-└── README.md
+│   ├── src/
+│   │   ├── components/
+│   │   ├── App.js
+│   │   └── App.css
+│   └── package.json
+├── README.md
+└── SETUP_GUIDE.md
 ```
 
 ---
@@ -73,50 +74,37 @@ cd backend
 npm install
 ```
 
-This will install:
-- `express` - Web framework
-- `cors` - Cross-Origin Resource Sharing
-- `nodemailer` - Email service
-- `dotenv` - Environment variables
-- `express-validator` - Form validation
-- `mongoose` - MongoDB ODM (optional)
-- `nodemon` - Auto-reload on changes
+This installs:
+- `express` — Web framework
+- `cors` — Cross-Origin Resource Sharing
+- `nodemailer` — Email service (optional)
+- `dotenv` — Environment variables
+- `express-validator` — Form validation
+- `nodemon` — Auto-reload on changes (dev only)
 
-### Step 3: Configure Environment Variables
+> ℹ️ **No MongoDB or mongoose** is required. Data is stored in `backend/data/*.json` files, which are auto-created by the server on first run.
+
+### Step 3: Configure Environment Variables (Optional)
 ```bash
-# .env file is already created, edit it:
-nano .env  # or use your preferred editor
+cp .env.example .env
 ```
 
-Update with your credentials:
+Edit `.env` with your email credentials (optional — forms still work without it):
 ```env
-# Required fields
+PORT=5000
+NODE_ENV=development
+CLIENT_URL=http://localhost:3000
+
+# Only needed for email notifications
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
-SMTP_USER=your_email@gmail.com
-SMTP_PASS=your_app_password
+SMTP_USER=your-email@gmail.com
+SMTP_PASS=your-gmail-app-password
 FROM_EMAIL=noreply@chrelisa.com
 ADMIN_EMAIL=admin@chrelisa.com
-
-# Optional fields
-NODE_ENV=development
-PORT=5000
-CLIENT_URL=http://localhost:3000
-MONGODB_URI=mongodb://localhost:27017/chrelisa
-JWT_SECRET=your_jwt_secret_key
 ```
 
-### Step 4: Setup Gmail App Password (Recommended)
-
-1. Go to [Google Account Settings](https://myaccount.google.com)
-2. Select "Security" from the left menu
-3. Enable "2-Step Verification"
-4. Scroll down to "App passwords"
-5. Select "Mail" and "Windows Computer"
-6. Copy the generated 16-character password
-7. Use this password in `.env` as `SMTP_PASS`
-
-### Step 5: Test Backend Server
+### Step 4: Start Backend Server
 ```bash
 # Development mode (with auto-reload)
 npm run dev
@@ -128,12 +116,11 @@ npm start
 Expected output:
 ```
 🚀 Server running on http://localhost:5000
-📧 SMTP Host: smtp.gmail.com
+📧 SMTP Host: Not Configured
+💾 Using local file-based storage (no database required)
 ```
 
-### Step 6: Test API Endpoints
-
-Open a new terminal and test:
+### Step 5: Test API Endpoints
 
 ```bash
 # Health check
@@ -145,15 +132,24 @@ curl http://localhost:5000/api/categories
 # Get products
 curl http://localhost:5000/api/products
 
-# Test contact form (POST request)
+# Test contact form submission
 curl -X POST http://localhost:5000/api/contact \
   -H "Content-Type: application/json" \
   -d '{"name":"Test","email":"test@example.com","subject":"Test","message":"Test message"}'
+
+# Test newsletter subscription
+curl -X POST http://localhost:5000/api/newsletter/subscribe \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com"}'
 ```
+
+After form submissions, check the created files:
+- `backend/data/contacts.json` — contact form submissions
+- `backend/data/newsletter.json` — newsletter subscribers
 
 ---
 
-## Frontend Setup
+## Frontend Setup (React)
 
 ### Step 1: Navigate to Frontend Directory (in a new terminal)
 ```bash
@@ -165,12 +161,12 @@ cd frontend
 npm install
 ```
 
-This will install:
-- `react` - UI library
-- `react-dom` - React DOM renderer
-- `react-scripts` - Build tools
-- `axios` - HTTP client
-- `@fortawesome/fontawesome-free` - Icons
+This installs:
+- `react` — UI library
+- `react-dom` — React DOM renderer
+- `react-scripts` — Build tools
+- `axios` — HTTP client
+- `@fortawesome/fontawesome-free` — Icons
 
 ### Step 3: Start Development Server
 ```bash
@@ -185,8 +181,6 @@ You can now view chrelisa-frontend in the browser.
 
   Local:            http://localhost:3000
   On Your Network:  http://192.168.x.x:3000
-
-Note that the development build is not optimized.
 ```
 
 The app will automatically open in your default browser.
@@ -220,117 +214,60 @@ Now you have:
 - **Backend API**: http://localhost:5000
 - **Frontend App**: http://localhost:3000
 
+The React app proxies all `/api/*` requests to the backend automatically.
+
 ---
 
 ## Common Issues & Solutions
 
 ### Issue: "Port 5000 already in use"
-
-**Solution:**
 ```bash
-# Find process using port 5000
-lsof -i :5000
-
-# Kill the process
-kill -9 <PID>
-
-# Or use this one-liner
 lsof -ti:5000 | xargs kill -9
 ```
 
 ### Issue: "Port 3000 already in use"
-
-**Solution:**
 ```bash
 lsof -ti:3000 | xargs kill -9
 ```
 
 ### Issue: "Module not found" errors
-
-**Solution:**
 ```bash
-# Clear npm cache and reinstall
 rm -rf node_modules package-lock.json
 npm install
 ```
 
 ### Issue: "Cannot find module axios"
-
-**Solution (Frontend):**
 ```bash
 cd frontend
 npm install axios
 ```
 
 ### Issue: "CORS error when submitting forms"
-
-**Solution:**
 1. Verify backend is running on port 5000
-2. Check `.env` file has `CLIENT_URL=http://localhost:3000`
+2. Check `.env` has `CLIENT_URL=http://localhost:3000`
 3. Restart backend server
 
-### Issue: "Email not being sent"
-
-**Debug steps:**
-1. Verify SMTP credentials in `.env`
-2. Check SMTP_HOST is correct (smtp.gmail.com for Gmail)
-3. Ensure Gmail app password is being used (not regular password)
-4. Check backend logs for error messages
-5. Test SMTP credentials manually:
-
-```bash
-# Create test-email.js in backend directory
-const nodemailer = require('nodemailer');
-
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: process.env.SMTP_PORT,
-  secure: false,
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS
-  }
-});
-
-transporter.verify((error, success) => {
-  if (error) {
-    console.log('SMTP Error:', error);
-  } else {
-    console.log('SMTP Connection: OK');
-  }
-});
-
-# Run with: node test-email.js
-```
-
 ### Issue: Styles not loading
-
-**Solution:**
 1. Clear browser cache (Ctrl+Shift+Delete)
-2. Hard refresh browser (Ctrl+Shift+R or Cmd+Shift+R)
-3. Verify CSS files are in correct locations
+2. Hard refresh (Ctrl+Shift+R or Cmd+Shift+R)
 
 ### Issue: "npm: command not found"
-
-**Solution:**
 1. Ensure Node.js is installed: `node --version`
 2. Restart terminal after installing Node.js
-3. On Mac, might need to run: `sudo npm install -g npm@latest`
+3. On Mac: `sudo npm install -g npm@latest`
 
 ---
 
 ## Development Workflow
 
-### 1. Feature Development
-
-**Backend (Add new API endpoint):**
+### Add a New API Endpoint (Backend)
 ```javascript
-// In backend/routes/new-route.js
+// backend/routes/new-route.js
 const express = require('express');
 const router = express.Router();
 
 router.get('/', (req, res) => {
-  res.json({ message: 'Your response' });
+  res.json({ success: true, message: 'Your response' });
 });
 
 module.exports = router;
@@ -342,9 +279,9 @@ const newRoutes = require('./routes/new-route');
 app.use('/api/new-endpoint', newRoutes);
 ```
 
-**Frontend (Add new component):**
+### Add a New React Component (Frontend)
 ```javascript
-// In frontend/src/components/NewComponent.js
+// frontend/src/components/NewComponent.js
 import React from 'react';
 
 function NewComponent() {
@@ -361,94 +298,39 @@ export default NewComponent;
 Then import in `App.js`:
 ```javascript
 import NewComponent from './components/NewComponent';
-
-// Add to JSX
+// Add to JSX:
 <NewComponent />
 ```
 
-### 2. Testing Forms
+### Testing Forms
 
 **Newsletter Subscription:**
 1. Scroll to newsletter section
-2. Enter test email
-3. Click Subscribe
-4. Should see success notification
-5. Check email for confirmation
+2. Enter test email → click Subscribe
+3. Should see success notification
+4. Check `backend/data/newsletter.json` for the record
 
 **Contact Form:**
-1. Fill all fields with test data
-2. Click Send Message
-3. Should see success notification
-4. Check admin email for message
-
-### 3. Debugging
-
-**Backend Debugging:**
-```bash
-# Add console.log statements
-console.log('Request received:', req.body);
-
-# Check logs in terminal where npm run dev is running
-```
-
-**Frontend Debugging:**
-```bash
-# Open browser Developer Tools (F12)
-# Go to Console tab to see errors
-# Network tab to see API calls
-
-# Add React DevTools extension to browser
-```
-
-### 4. Version Control
-
-```bash
-# Check status
-git status
-
-# Add changes
-git add .
-
-# Commit changes
-git commit -m "Description of changes"
-
-# Push to remote (if configured)
-git push origin main
-```
+1. Fill all fields → click Send Message
+2. Should see success notification
+3. Check `backend/data/contacts.json` for the record
 
 ---
 
 ## Production Deployment
 
-### Backend (Heroku)
+### Backend
 ```bash
 cd backend
-heroku create chrelisa-api
-git push heroku main
+npm start
 ```
 
-### Frontend (Netlify)
+### Frontend Build
 ```bash
 cd frontend
 npm run build
-# Deploy build folder to Netlify
+# Deploy the /build folder to your hosting provider
 ```
-
----
-
-## Performance Tips
-
-1. **Backend:**
-   - Use connection pooling for databases
-   - Implement caching for frequently accessed data
-   - Use compression middleware
-   - Monitor API response times
-
-2. **Frontend:**
-   - Lazy load images and components
-   - Minify and compress assets
-   - Use React.memo for components
-   - Implement virtual scrolling for long lists
 
 ---
 
@@ -459,15 +341,12 @@ npm run build
 - Validate input on both frontend and backend
 - Use HTTPS in production
 - Keep dependencies updated
-- Implement rate limiting
-- Use secure headers
 
 ❌ **Don't:**
 - Commit `.env` file to git
 - Expose sensitive data in logs
 - Use hardcoded credentials
 - Skip input validation
-- Use outdated dependencies
 
 ---
 
@@ -477,33 +356,16 @@ npm run build
 # Backend
 cd backend && npm run dev          # Start dev server
 npm start                           # Start production server
-npm install package-name           # Install new package
-npm update                          # Update packages
+npm install package-name            # Install new package
 
 # Frontend
 cd frontend && npm start            # Start dev server
 npm run build                       # Create production build
 npm test                            # Run tests
-npm install package-name           # Install new package
-
-# Git
-git status                          # Check status
-git add .                           # Stage changes
-git commit -m "message"             # Commit changes
-git push                            # Push to remote
+npm install package-name            # Install new package
 ```
 
 ---
 
-## Need Help?
-
-- Check browser console (F12) for errors
-- Check backend terminal for logs
-- Read error messages carefully
-- Google the error message
-- Create an issue with detailed description
-
----
-
 **Last Updated:** May 22, 2026
-**Version:** 1.0.0
+**Version:** 2.0.0 (React + Database-free)
